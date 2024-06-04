@@ -66,7 +66,7 @@ class AuthenticatedSessionController extends Controller
 
         if (!$user) {
             Log::info('user id before create user : ,', [$userId]);
-            $newUser = User::create([
+            $user = User::create([
                 'id' => $userId,
                 'name' => $callback->getName(),
                 'email' => $callback->getEmail(),
@@ -74,21 +74,11 @@ class AuthenticatedSessionController extends Controller
                 'password' => null,
                 'email_verified_at' => Carbon::now('Asia/Jakarta'),
             ]);
-            Log::info('user id after create user : ,', [$newUser->id]);
-            event(new Registered($newUser));
+            event(new Registered($user));
         }
 
-        if ($user instanceof Authenticatable) {
-            Log::info('yes you are');
-        }
-        
-        if ($user instanceof User) {
-            Log::info('no you are not');
-        }
-        Log::info('user id', [$newUser->id]);
+        Auth::login($user, true);
 
-        Auth::login($newUser, true);
-        Log::info('success login with google');
-        return redirect()->route('dashboard');
+        return redirect('/');
     }
 }
