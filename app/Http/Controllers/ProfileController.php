@@ -45,19 +45,21 @@ class ProfileController extends Controller
 
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
+
             try {
                 $response = $this->supabaseService->uploadImage($file);
+
+                if ($response === null) {
+                    return Redirect::route('profile.edit')->withErrors(['avatar' => 'Failed to upload image to Supabase.']);
+                }
 
                 if ($response->status() == 200) {
                     $signedUrl = $this->supabaseService->getSignedUrl($file);
                     $user->avatar = $signedUrl;
-                    Log::info('Avatar updated successfully.', ['user_id' => $user->id, 'signed_url' => $signedUrl]);
                 } else {
-                    Log::error("Failed to upload image to Supabase:", ['response' => $response->body()]);
                     return Redirect::route('profile.edit')->withErrors(['avatar' => 'Failed to upload image to Supabase.']);
                 }
             } catch (\Exception $e) {
-                Log::error('Exception occurred while uploading image to Supabase', ['exception' => $e]);
                 return Redirect::route('profile.edit')->withErrors(['avatar' => 'Failed to upload image due to an error.']);
             }
         }
