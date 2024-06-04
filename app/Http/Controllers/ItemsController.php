@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class ItemsController extends Controller
 {
     public function showAllAnime() {
-        $animeItems = Item::whereHas('categoryItems', function ($query) {
+        $animeItems = Item::whereHas('categoryItem', function ($query) {
             $query->where('category_id', 1);
         })->orderBy('title', 'desc')
         ->get();
@@ -18,13 +18,21 @@ class ItemsController extends Controller
         return response()->json($animeItems);
     }
 
+    public function showPageAnimes() {
+        return view('anime_list');
+    }
+
     public function showAllManga() {
-        $mangaItems = Item::whereHas('categoryItems', function ($query) {
+        $mangaItems = Item::whereHas('categoryItem', function ($query) {
             $query->where('category_id', 2);
         })->orderBy('title', 'desc')
         ->get();
 
         return response()->json($mangaItems);
+    }
+
+    public function showPagemangas() {
+        return view('manga_list');
     }
 
     public function getHotAnime() {
@@ -35,14 +43,23 @@ class ItemsController extends Controller
         ->take(6)
         ->get();
 
-        Log::info('value : ' ,[response()->json($hotAnime)]);
         return response()->json($hotAnime);
+    }
+
+    public function getHotManga()
+    {
+        $hotManga = Item::whereHas('characterItem', function ($query) {
+            $query->where('category_id', 2);
+        })->orderBy('rating', 'desc')
+            ->take(6)
+            ->get();
+
+        return response()->json($hotManga);
     }
 
     public function showDetail(int $id) {
         $item = Item::with('characterItem')->findOrFail($id);
-        Log::info('value : ', [$item]);
 
-        return view('item.detail', compact('item'));
+        return view('anime_describe', compact('item'));
     }
 }
