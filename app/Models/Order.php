@@ -22,7 +22,8 @@ class Order extends Model
         'payment_method',
         'transaction_id',
         'gross_amount',
-        'payment_code',
+        'token',
+        'redirect_url',
         'status',
     ];
 
