@@ -1,35 +1,44 @@
 <?php
 
+namespace App\Services;
+
 use App\Models\Order;
+use App\Models\Product;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Midtrans\Snap;
 use Midtrans\Notification;
 
 class SnapService extends MidtransService
 {
 
-    protected $order;
+    protected $product;
 
-    public function __construct(Order $order)
+    public function __construct(Product $product)
     {
         parent::__construct();
 
-        $this->order = $order;
+        $this->product = $product;
     }
 
-    public function generateSnapToken()
+    public function generateSnapToken($user)
     {
-        $user = Auth::user();
+        $order_id = Str::uuid();
+
         $transaction_details = [
-            'order_id' => $this->order->id,
-            'gross_amount' => $this->order->product->price,
+            'order_id' => $order_id,
+            'gross_amount' => $this->product->price,
         ];
 
         $item_details = [
-            'id' => $this->order->product->id,
-            'price' => $this->order->product->price,
+            [
+            'id' => $this->product->id,
+            'price' => $this->product->price,
             'quantity' => 1,
-            'name' => $this->order->product->name
+            'name' => $this->product->name
+            ]
         ];
 
         $customer_details = [
@@ -45,43 +54,38 @@ class SnapService extends MidtransService
             'item_details' => $item_details
         ];
 
+        $order = Order::where('user_id', $user->id)
+            ->where('product_id', $this->product->id)->first();
+
+        if ($order && $order->status == 'PENDING') {
+            return redirect()->route('shop.history');
+        }
+
         try {
-            $paymentUrl = Snap::createTransaction($params)->redirect_url;
-            header('Location: ' . $paymentUrl);
+            $response = Snap::createTransaction($params);
+
+            Log::info('response: ', [$response]);
+
+            $token = $response->token;
+            $redirect_url = $response->redirect_url;
+
+            Order::create([
+                'id' => $order_id,
+                'user_id' => $user->id,
+                'product_id' => $this->product->id,
+                'gross_amount' => $this->product->price,
+                'token' => $token,
+                'redirect_url' => $redirect_url,
+                'created_at' => Carbon::now('Asia/Jakarta'),
+                'updated_at' => Carbon::now('Asia/Jakarta'),
+            ]);
+
+            return $response;
         } catch (Exception $e) {
             echo $e->getMessage();
+            return false;
         }
     }
 
-    public function callbackHandle()
-    {
-        $notif = new Notification();
 
-        $transaction = $notif->transaction_status;
-        $fraud = $notif->fraud_status;
-
-
-        error_log("Order ID $notif->order_id: " . "transaction status = $transaction, fraud staus = $fraud");
-
-        if ($transaction == 'capture') {
-            if ($fraud == 'challenge') {
-              // TODO Set payment status in merchant's database to 'challenge'
-            }
-            else if ($fraud == 'accept') {
-              // TODO Set payment status in merchant's database to 'success'
-            }
-        }
-        else if ($transaction == 'cancel') {
-            if ($fraud == 'challenge') {
-              // TODO Set payment status in merchant's database to 'failure'
-            }
-            else if ($fraud == 'accept') {
-              // TODO Set payment status in merchant's database to 'failure'
-            }
-        }
-        elseif ($transaction == 'deny') {
-              // TODO Set payment status in merchant's database to 'failure'
-        }
-    
-    }
 }
