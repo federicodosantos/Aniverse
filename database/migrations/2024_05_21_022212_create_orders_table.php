@@ -15,8 +15,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('user_id');
             $table->uuid('product_id');
-            $table->string('payment_method',10)->nullable(false);
-            $table->string('transaction_id',100)->nullable(false);
+            $table->string('payment_method',10)->nullable();
+            $table->string('transaction_id',100)->nullable();
             $table->integer('gross_amount')->nullable(false);
             $table->string('payment_code',20)->nullable(false);
             $table->string('status', 20)->nullable(false);
